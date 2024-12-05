@@ -177,6 +177,7 @@ namespace Community.PowerToys.Run.Plugin.BraveFavorite
                 BraveFavorite.BrowserSource.Brave => new BraveBrowserSource(),
                 BraveFavorite.BrowserSource.Chrome => new ChromeBrowserSource(),
                 BraveFavorite.BrowserSource.Edge => new EdgeBrowserSource(),
+                BraveFavorite.BrowserSource.FireFox => new FireFoxBrowserSource(),
                 _ => throw new ArgumentOutOfRangeException(nameof(browserSource), browserSource, null),
             };
         }
