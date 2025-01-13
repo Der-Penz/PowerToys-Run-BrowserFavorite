@@ -22,7 +22,6 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
         private const string SearchTree = nameof(SearchTree);
         private const string SearchBaseUrl = nameof(SearchBaseUrl);
         private const string BrowserSource = nameof(BrowserSource);
-        private const string BrowserExePath = nameof(BrowserExePath);
         private const bool SearchTreeDefault = false;
         private const bool SearchBaseUrlDefault = false;
         private const int BrowserSourceTypeDefault = 0;
@@ -164,9 +163,10 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
             {
                 UpdateBrowserSource(_browserSourceType);
             }
-            catch (ApplicationException)
+            catch (ApplicationException ex)
             {
                 _browserSource = null;
+                Log.Exception("Browser Source not found", ex, typeof(Main));
                 _context?.API.ShowMsg(
                     "Error selecting Browser source",
                     "The selected browser source might not be installed on your system, try selecting a different one",
@@ -210,6 +210,7 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
                     BrowserFavorite.BrowserSource.Brave => new BraveBrowserSource(),
                     BrowserFavorite.BrowserSource.Chrome => new ChromeBrowserSource(),
                     BrowserFavorite.BrowserSource.Edge => new EdgeBrowserSource(),
+                    BrowserFavorite.BrowserSource.FireFox => new FireFoxBrowserSource(),
                     _ => throw new ArgumentOutOfRangeException(nameof(browserSource), browserSource, null),
                 };
             }
@@ -221,6 +222,8 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
             {
                 throw new ApplicationException("Selected Browser Source might not be installed", e);
             }
+
+            Log.Info("Here with " + browserSource, typeof(FireFoxFavoriteProvider));
         }
     }
 }

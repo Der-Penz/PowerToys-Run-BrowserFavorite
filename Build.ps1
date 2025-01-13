@@ -14,6 +14,7 @@ foreach ($platform in "ARM64", "x64")
 
     Remove-Item -Path "$PSScriptRoot\Community.PowerToys.Run.Plugin.BrowserFavorite\bin\*" -Recurse -Include *.xml, *.pdb, PowerToys.*, Wox.*
     Rename-Item -Path "$PSScriptRoot\Community.PowerToys.Run.Plugin.BrowserFavorite\bin\$platform\Release" -NewName "BrowserFavorite"
+    Copy-Item "$PSScriptRoot\Community.PowerToys.Run.Plugin.BrowserFavorite\Libs\$platform\Microsoft.Data.Sqlite.dll" -Destination "$PSScriptRoot\Community.PowerToys.Run.Plugin.BrowserFavorite\bin\$platform\BrowserFavorite"
 
     # Define the destination zip file path
     $zipPath = "$PSScriptRoot\BrowserFavorite-$version-$platform.zip"
