@@ -8,4 +8,5 @@ public enum BrowserSource
     Brave,
     Chrome,
     Edge,
+    FireFox,
 }
