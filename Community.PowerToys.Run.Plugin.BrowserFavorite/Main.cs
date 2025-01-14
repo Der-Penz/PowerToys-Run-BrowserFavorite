@@ -77,6 +77,10 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
             }
             catch (ApplicationException ex)
             {
+                _context?.API.ShowMsg(
+                    "Error loading Browser source",
+                    "There was an error loading the selected browser source, it may not be installed on your system, try selecting a different one, or contact the plugin developer for support",
+                    string.Empty);
                 _browserSource = null;
                 Log.Exception("Browser Source not found", ex, typeof(Main));
             }
@@ -140,7 +144,6 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
 
         public void UpdateSettings(PowerLauncherPluginSettings settings)
         {
-            var prevSourceType = _browserSourceType;
             if (settings != null && settings.AdditionalOptions != null)
             {
                 _searchTree = settings.AdditionalOptions.FirstOrDefault(x => x.Key == SearchTree)?.Value ??
@@ -222,8 +225,6 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
             {
                 throw new ApplicationException("Selected Browser Source might not be installed", e);
             }
-
-            Log.Info("Here with " + browserSource, typeof(FireFoxFavoriteProvider));
         }
     }
 }

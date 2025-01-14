@@ -3,8 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Community.PowerToys.Run.Plugin.BrowserFavorite.Models;
 using Microsoft.Data.Sqlite;
 using Wox.Plugin.Logger;
@@ -13,11 +13,8 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite.Helpers;
 
 public class FireFoxFavoriteProvider : IFavoriteProvider
 {
-    private static readonly string FolderType = "2";
-    private static readonly string RootGUID = "root________";
-    private static readonly string BookmarkPath =
-        Environment.ExpandEnvironmentVariables(
-            @"%APPDATA%\Mozilla\Firefox\Profiles\c4pnpa26.default-release\places.sqlite");
+    private const string FolderType = "2";
+    private const string RootGuid = "root________";
 
     private readonly FileSystemWatcher _watcher;
     private FavoriteItem _root;
@@ -26,18 +23,18 @@ public class FireFoxFavoriteProvider : IFavoriteProvider
 
     public FireFoxFavoriteProvider()
     {
-        Log.Info("Here", typeof(FireFoxFavoriteProvider));
+        var bookMarkPath = GetBookmarkPath();
         _root = new FavoriteItem();
-        InitFavorites();
+        InitFavorites(bookMarkPath);
 
         _watcher = new FileSystemWatcher
         {
-            Path = Path.GetDirectoryName(BookmarkPath)!,
-            Filter = Path.GetFileName(BookmarkPath),
+            Path = Path.GetDirectoryName(bookMarkPath)!,
+            Filter = Path.GetFileName(bookMarkPath),
             NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.LastWrite,
         };
 
-        _watcher.Changed += (s, e) => InitFavorites();
+        _watcher.Changed += (_, _) => InitFavorites(bookMarkPath);
         _watcher.EnableRaisingEvents = true;
     }
 
@@ -46,21 +43,34 @@ public class FireFoxFavoriteProvider : IFavoriteProvider
         _watcher.Dispose();
     }
 
-    private void InitFavorites()
+    private static string GetBookmarkPath()
     {
-        Log.Info("Before", typeof(FireFoxFavoriteProvider));
-        if (!File.Exists(BookmarkPath))
+        string profilesPath = Environment.ExpandEnvironmentVariables(@"%APPDATA%\Mozilla\Firefox\Profiles");
+
+        if (Directory.Exists(profilesPath))
         {
-            Log.Info(BookmarkPath, typeof(FireFoxFavoriteProvider));
+            var defaultReleaseFolder = Directory.GetDirectories(profilesPath, "*default-release*")
+                .FirstOrDefault();
+
+            if (defaultReleaseFolder != null)
+            {
+                return Path.Combine(defaultReleaseFolder, "places.sqlite");
+            }
+        }
+
+        throw new DirectoryNotFoundException("No default-release folder found in Firefox profiles.");
+    }
+
+    private void InitFavorites(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
             return;
         }
 
-        Log.Info("After", typeof(FireFoxFavoriteProvider));
-
-        using var db = new SqliteConnection($"Filename={BookmarkPath}");
+        using var db = new SqliteConnection($"Filename={filePath}");
         db.Open();
 
-        Log.Info("Open", typeof(FireFoxFavoriteProvider));
         var statement = @"
                         SELECT moz_bookmarks.title, moz_bookmarks.id, moz_bookmarks.type, moz_bookmarks.parent, moz_bookmarks.guid, moz_places.url 
                         FROM moz_bookmarks
@@ -68,14 +78,14 @@ public class FireFoxFavoriteProvider : IFavoriteProvider
         var command = db.CreateCommand();
         command.CommandText = statement;
         var reader = command.ExecuteReader();
-        BookMark? root = null;
-        Dictionary<int, (BookMark, int)> favorites = new();
+        BookMark? rootBookmark = null;
+        Dictionary<int, BookMark> favorites = new();
         while (reader.Read())
         {
-            var name = reader.GetString(0);
+            var name = !reader.IsDBNull(0) ? reader.GetString(0) : string.Empty;
             var id = reader.GetString(1);
             var type = reader.GetString(2);
-            var parent = reader.GetString(3);
+            var parent = int.Parse(reader.GetString(3));
             var guid = reader.GetString(4);
             var url = !reader.IsDBNull(5) ? reader.GetString(5) : string.Empty;
 
@@ -83,75 +93,96 @@ public class FireFoxFavoriteProvider : IFavoriteProvider
 
             var bookmark = new BookMark
             {
-                Id = int.Parse(id),
                 Name = name,
                 Type = isFolder ? FavoriteType.Folder : FavoriteType.Url,
                 Url = url,
-                ParentId = int.Parse(parent),
                 Children = new List<BookMark>(),
             };
 
-            if (guid.Equals(RootGUID))
+            if (guid.Equals(RootGuid))
             {
-                root = bookmark;
+                rootBookmark = bookmark;
             }
 
-            if (string.IsNullOrEmpty(url))
+            if (parent != 0 && favorites.TryGetValue(parent, out var parentBookmark))
             {
-                continue;
+                parentBookmark.Children.Add(bookmark);
             }
 
-            Log.Info($"Found bookmark {name} ({type}) guid {guid} at {url}", typeof(FireFoxFavoriteProvider));
-            favorites.Add(int.Parse(id), (bookmark, int.Parse(parent)));
+            favorites.Add(int.Parse(id), bookmark);
         }
 
-        if (root == null)
+        reader.Close();
+        if (rootBookmark == null)
         {
             throw new NullReferenceException("Failed to find root Element in the Table");
         }
 
-        foreach (var (key, (bookMark, parentKey)) in favorites)
+        var newRoot = new FavoriteItem();
+        ProcessFavorites(rootBookmark, newRoot, string.Empty, true);
+
+        _root = newRoot;
+    }
+
+    private void ProcessFavorites(BookMark element, FavoriteItem parent, string path, bool root)
+    {
+        if (element.Type == FavoriteType.Folder)
         {
-            if (!favorites.TryGetValue(parentKey, out var favorite))
+            // special case toolbar
+            if (element.Name.Equals("toolbar"))
             {
-                continue;
+                foreach (var child in element.Children)
+                {
+                    ProcessFavorites(child, parent, path, false);
+                }
+
+                return;
             }
 
-            var (parent, _) = favorite;
-            parent.Children.Add(bookMark);
+            if (!root)
+            {
+                path +=
+                    $"{(string.IsNullOrWhiteSpace(path) ? string.Empty : "/")}{(string.IsNullOrWhiteSpace(element.Name) ? " " : element.Name)}";
+            }
+
+            var folder = new FavoriteItem(element.Name, null, path, FavoriteType.Folder);
+            if (root)
+            {
+                folder = parent;
+            }
+            else
+            {
+                parent.AddChildren(folder);
+            }
+
+            foreach (var child in element.Children)
+            {
+                ProcessFavorites(child, folder, path, false);
+            }
         }
-
-        _root = new FavoriteItem();
-
-        // build the actual FavoriteItems
-        foreach (var (key, (bookMark, parentKey)) in favorites)
+        else
         {
-            var item = new FavoriteItem(bookMark.Name, new Uri(bookMark.Url), string.Empty, bookMark.Type);
-            _root.AddChildren(item);
+            try
+            {
+                path += $"{(string.IsNullOrWhiteSpace(path) ? string.Empty : "/")}{element.Name}";
+                var favorite = new FavoriteItem(element.Name, new Uri(element.Url), path, FavoriteType.Url);
+                parent.AddChildren(favorite);
+            }
+            catch (Exception ex)
+            {
+                Log.Exception("Failed to create Favourite item", ex, typeof(FavoriteItem));
+            }
         }
-
-        reader.Close();
     }
 
     private class BookMark
     {
-        public int Id { get; set; }
+        public required string Name { get; init; }
 
-        public required string Name { get; set; }
+        public FavoriteType Type { get; init; }
 
-        public FavoriteType Type { get; set; }
+        public required string Url { get; init; }
 
-        public required string Url { get; set; }
-
-        public int ParentId { get; set; }
-
-        public required List<BookMark> Children { get; set; }
-
-        public FavoriteItem ToFavoriteItem(BookMark root)
-        {
-            var path = string.Empty;
-
-            return new FavoriteItem(Name, new Uri(Url), path, FavoriteType.Folder);
-        }
+        public required List<BookMark> Children { get; init; }
     }
 }
