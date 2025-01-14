@@ -6,6 +6,7 @@ It extends the functionality to allow for searching empty bookmark names and sup
 - Brave
 - Edge
 - Chrome
+- FireFox
 
 ## Installation
 
@@ -32,9 +33,8 @@ It extends the functionality to allow for searching empty bookmark names and sup
 There is no localization right now, but the plugin has relatively limited user-facing strings.
 
 ## Future Plans
-
-- support for more browser
-- localization
+I don't have any plans to add new features to this plugin, there might be some bug fixes in the future or a new browser added.
+Feel free to open an issue or a pull request if you have any ideas or want to contribute.
 
 ## Build
 
