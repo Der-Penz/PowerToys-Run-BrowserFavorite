@@ -9,4 +9,5 @@ public enum BrowserSource
     Chrome,
     Edge,
     FireFox,
+    WaterFox,
 }
