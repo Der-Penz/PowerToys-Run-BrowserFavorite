@@ -47,5 +47,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.PLUGIN_NAME}}-${{env.PLUGIN_VERSION}}
+          name: ${{env.PLUGIN_NAME}}-${{env.PLUGIN_VERSION}}-${{matrix.platform}}
           path: "**/*.zip"
