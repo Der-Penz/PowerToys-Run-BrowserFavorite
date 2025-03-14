@@ -214,6 +214,7 @@ namespace Community.PowerToys.Run.Plugin.BrowserFavorite
                     BrowserFavorite.BrowserSource.Chrome => new ChromeBrowserSource(),
                     BrowserFavorite.BrowserSource.Edge => new EdgeBrowserSource(),
                     BrowserFavorite.BrowserSource.FireFox => new FireFoxBrowserSource(),
+                    BrowserFavorite.BrowserSource.WaterFox => new WaterFoxBrowserSource(),
                     _ => throw new ArgumentOutOfRangeException(nameof(browserSource), browserSource, null),
                 };
             }
