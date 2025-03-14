@@ -62,6 +62,10 @@ extension won't work properly anymore. To fix this, remove the plugin entry in t
 
 ## Contribution
 
+Thanks to:
+
+- [eissar](https://github.com/eissar) : Waterfox Browser source
+
 Feel free to contribute to the project. Pull requests are welcome.
 Together we can build the perfect plugin
 
