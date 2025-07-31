@@ -7,6 +7,7 @@ public enum BrowserSource
 {
     Brave,
     Chrome,
+    Comet,
     Edge,
     FireFox,
     WaterFox,
