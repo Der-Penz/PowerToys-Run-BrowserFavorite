@@ -8,6 +8,7 @@ It extends the functionality to allow for searching empty bookmark names and sup
 - Chrome
 - FireFox
 - WaterFox
+- Vivaldi
 
 ## Installation
 

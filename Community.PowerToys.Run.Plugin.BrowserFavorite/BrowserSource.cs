@@ -10,4 +10,5 @@ public enum BrowserSource
     Edge,
     FireFox,
     WaterFox,
+    Vivaldi,
 }
